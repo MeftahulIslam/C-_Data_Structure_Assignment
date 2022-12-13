@@ -1,0 +1,529 @@
+#include <iostream>
+#include <string>
+#include <new>
+#include <cstdlib>
+#include <ctime>
+using namespace std;
+
+/* run this program using the console pauser or add your own getch, system("pause") or input loop */
+struct graduates{			//structure of the data-structure;
+	string name;
+	graduates *pNext;
+};
+struct specialties{
+	string spName;
+	specialties *spNext;
+	graduates *pNext;
+};
+struct companies{
+	string name;
+	int qty;
+	companies *pLeft;
+	companies *pRight;
+	specialties *spNext;
+};
+specialties *spfirst = NULL;		//All the global variables used
+companies *root = NULL;
+bool found;				
+
+
+bool spIsEmpty();					//All the functions used in the code
+bool compIsEmpty();
+void insertSpecialties(string spName, specialties *(&index));
+specialties *searchSp(string spName, specialties *(&index));
+void insertGraduates(string gName, string spName, specialties *(&index));
+void printSp(specialties *(&index));
+void printGrad(string spName, specialties *(&index));
+bool searchDupSp(string spName, specialties *(&index));
+bool searchDupGrad(string gName, string spName, specialties *(&index));
+companies *getNew(string compName, int qty);
+companies *searchComp(string compName, companies *root);
+bool searchDupComp(string compName);
+companies *insertComp(string compName, int qty, companies *root);
+void insertCompSp(string spName, string compName);
+void printCompSp(string compName);
+void insertCompGrad(string compName, string spName, int qtyReq);
+
+bool spIsEmpty(){						//Checks if the specialty list is empty
+	if(spfirst == NULL){
+		return true;
+	}
+	else
+		return false;
+}
+bool compIsEmpty(){					//Checks if the company tree is empty
+	if(root == NULL){
+		return true;
+	}
+	else return false;
+}
+void insertSpecialties(string spName, specialties *(&index)){  	//Adding specialties in the sorted list  	
+	specialties *newSp = new(nothrow) specialties();
+	newSp->spName = spName;
+	specialties *temp = index;
+	specialties *temp1 = NULL;
+	while(temp != NULL && spName > temp->spName){			
+		temp1 = temp;
+		temp = temp->spNext;
+	}
+	if(temp1 == NULL){
+		newSp->spNext = index;
+		index = newSp;
+	}
+	else{
+		temp1->spNext = newSp;
+		newSp->spNext = temp;
+	}
+	
+}
+specialties *searchSp(string spName, specialties *(&index)){	//Here index is used to be able to use the
+	specialties *search = index;								//the same function in both the structures
+	while(search != NULL){
+		if(search->spName == spName){
+			return search;
+		}
+		search = search->spNext;
+	}
+	return search;
+}
+void insertGraduates(string gName, string spName, specialties *(&index)){  
+	specialties *search = searchSp(spName, index);			//First searches for the specialty to add graduates to
+	if(search == NULL){										//If there is no such specialty by this name prints message
+		cout << "This specialty doesn't exist in the system!" << endl;
+		return;
+	}
+	graduates *newGrad = new(nothrow) graduates();
+	newGrad->name = gName;
+	graduates *temp = search->pNext;
+	graduates *temp1 = NULL;
+	while(temp != NULL && gName > temp->name){		//Sorts the list when adding a new node
+		temp1 = temp;
+		temp = temp->pNext;
+	}
+	if(temp1 == NULL){
+		newGrad->pNext = search->pNext;
+		search->pNext = newGrad;
+	}
+	else{
+		temp1->pNext = newGrad;
+		newGrad->pNext = temp;
+	}
+}
+void printSp(specialties *(&index)){
+	specialties *temp = index;
+	int i = 1;
+	if(index == NULL){									//If the there is no element in the list prints the message
+		cout << "The specialty list is empty!" << endl;
+		return;
+	}
+	cout << "Names of Specialties in the list: " << endl;
+	while(temp != NULL){
+		cout << "Specialty " << i << ": " << temp->spName << endl;
+		i++;
+		temp = temp->spNext;
+	}
+}
+void printGrad(string spName, specialties *(&index)){	//Prints all the graduates under the specified specialty
+	specialties *search = searchSp(spName, index);
+	if(search == NULL){
+		cout << "This specialty doesn't exist in this section" << endl;
+		return;
+	}
+	graduates *temp = search->pNext;			
+	if(search->pNext == NULL){			//If there is no element in the graduate list prints the message
+		cout << "The list of graduates under this specialty is empty!" << endl; 	
+		return;
+	}
+	cout << "Names of Graduates under specialty \"" << search->spName << "\" : " << endl; 
+	int i = 1;
+	while(temp != NULL){
+		cout << "Graduate " << i << ": " << temp->name << endl;
+		i++;
+		temp = temp->pNext;
+	}
+}
+bool searchDupSp(string spName, specialties *(&index)){			//Searches if the specified specialty already exists in
+	specialties *search = index;								// in the list
+	while(search != NULL){
+		if(search->spName == spName){
+			return true;										//if the name exists returns true
+		}
+		search = search->spNext;
+	}
+	return false;												//After traversal if no match is found returns false
+}
+bool searchDupGrad(string gName, string spName, specialties *(&index)){ 	//Searches if the specified graduate already
+	specialties *search = searchSp(spName, index);						    //exists in the specified specialty.
+	if(search == NULL){														//If the list is empty or no matches are found
+		return false;														//returns false
+	}
+	graduates *temp = search->pNext;
+	while(temp != NULL){
+		if(temp->name == gName){
+			return true;
+		}
+		temp = temp->pNext;
+	}
+	return false;
+}
+companies *getNew(string compName, int qty){					//gets new node for the tree when called
+	companies *newComp = new(nothrow) companies();
+	newComp->name = compName;
+	newComp->qty = qty;
+	newComp->pLeft = NULL;
+	newComp->pRight = NULL;
+	newComp->spNext = NULL;
+	return newComp;
+}
+companies *searchComp(string compName, companies *root){     //searches if the specified company exists in the list
+	found = true;											//global switch found is used here
+	if(root == NULL){										//to keep track if any match is found.
+		found = false;						
+		return root;
+	}
+	else if(compName < root->name){
+		return searchComp(compName, root->pLeft);
+	}
+	else if(compName > root->name){
+		return searchComp(compName, root->pRight);
+	}
+	else{
+		return root;
+	}
+}
+bool searchDupComp(string compName){					//Searches if the specified company already exists in the tree
+	companies *search = searchComp(compName, root);		//uses the searchComp() function to look for match
+	if(!found){				
+		return false;									//the result of the global variable found from 
+	}													//searchComp() is used here.
+	else{
+		return true;									//if a match is not found returns false else returns true
+	}
+}
+companies *insertComp(string compName, int qty, companies *root){ 			//Inserts new companies to the tree
+	if(!searchDupComp(compName)){											//the result searchDupComp() function is used here
+		if(root == NULL){													//uses recursion (if the tree is empty adds a new node) 
+			root = getNew(compName, qty);	
+		}																	//if there is data in the tree uses recursion to come to 
+		else if(compName < root->name){										//to the correct node and then adds a new node
+			root->pLeft = insertComp(compName, qty, root->pLeft);
+		}
+		else{
+			root->pRight = insertComp(compName, qty, root->pRight);
+		}
+		return root;
+	}
+	else{
+		cout << "This company already exists!" << endl;
+		return root;
+	}
+	
+}
+void insertCompSp(string spName, string compName){ 			//Adds new specialty to the specified company
+	companies *search = searchComp(compName, root);			//searches if the specified company really exists in the 
+	if(!found){												//tree
+		cout << "This company does't exist in the system!" << endl;
+		return;
+	}
+	if(!searchDupSp(spName, search->spNext)){				//Searches if the specified specialty already exists 
+		insertSpecialties(spName, search->spNext);			//in the specified company. If it doesn't adds new specialty
+	}														//using the insertSpecialties() function and giving the spNext
+	else{													//of the found company as a parameter to the function
+		cout << "This specialty already exists under this company!" << endl;
+	}
+}
+void printCompSp(string compName){							//Prints all the specialties under the specified company
+	companies *search = searchComp(compName, root);			//Searches if the specified company actually exists in the
+	if(!found){												//tree
+		cout << "This company doesn't exist in the system!" << endl;
+		return;
+	}
+	if(search->spNext == NULL){								//If the spNext under the found company is pointing to NULL
+		cout << "The list of specialties under this company is Empty!" << endl;		//then the list is empty
+		return;											
+	}
+	cout << "Under company \"" << compName <<"\" :" << endl; 		//If the company is found and specialty list under
+	printSp(search->spNext);										//the company is not empty then prints out all the
+}																	//available specialties
+void insertCompGrad(string compName, string spName, int qtyReq){      		//Re-allocates graduates from the 
+	companies *search = searchComp(compName, root);							//specialty list to specialty under company
+	specialties *searchCompSp = searchSp(spName, search->spNext);
+	if(searchCompSp == NULL){
+		cout << "This specialty doesn't exist under this company!" << endl;
+		return;
+	}
+	specialties *searchSpy = searchSp(spName, spfirst);               //Searches if the specified specialty exists in the
+	if(searchSpy == NULL){											//non-linear list of specialties
+		cout << "This specialty doesn't exist in the system!" << endl;
+		return;
+	}
+	graduates *temp = searchSpy->pNext;              			//If the specialty exists then enters that specialty
+	int counter = 0;											//to extract graduates
+	if(searchSpy->pNext == NULL){								//If there is no graduate in that specialties 
+		cout << "There are no graduates available under this specialty at the moment!" << endl; //prints the message
+		return;
+	}
+	while(temp != NULL){										//Counter counts the number of graduates available
+		counter++;												//if the graduate list is not empty
+		temp = temp->pNext;
+	}
+	if(counter >= qtyReq){									//If there are enough graduates to supply moves forward
+		int supplied = 0;									//Supplied keeps track of number of graduates provided
+		while(supplied != qtyReq){ 			//Runs as long as number of provided graduates is not equal to the number requested
+			if(counter == 1){				//If there is only one graduate in the list then extracts that only graduate
+				graduates *temp1 = searchSpy->pNext;
+				searchSpy->pNext = temp1->pNext;   	//Re-allocates the link to the specialties list under company
+				temp1->pNext = searchCompSp->pNext;	//maintains a stack.
+				searchCompSp->pNext = temp1;
+				counter--;				
+				supplied++;
+				search->qty -= 1;			//Decreases the actual number of vacant positions available in the company
+				return;					
+			}
+			srand(time(0));                  		//Here standard functions srand() and rand() has been used to randomly
+			int value = rand() % counter + 1;		//choose a graduate from the list
+			graduates *iterations = searchSpy->pNext; 	//Iterations pointer will keep track of the graduate that is to 
+			graduates *temp2 = NULL;					//be extracted
+			for(int i = 1; i < value; i++){       	//Randomly iterates to one of the available graduates in the list
+				temp2 = iterations;
+				iterations = iterations->pNext;
+			}
+			if(temp2 == NULL){					//If iterations is pointing to the first graduate
+				searchSpy->pNext = iterations->pNext;
+				iterations->pNext = searchCompSp->pNext;
+				searchCompSp->pNext = iterations;
+				counter--;
+				supplied++; 
+				search->qty -= 1;
+			}
+			else{							//else if iteration is pointing to a graduate somewhere else in the list
+				temp2->pNext = iterations->pNext;
+				iterations->pNext = searchCompSp->pNext;
+				searchCompSp->pNext = iterations;
+				counter--;
+				supplied++;
+				search->qty -= 1;
+			}
+		}
+	}
+	else{						//If there are not enough graduates available in the list to provide to the company
+		cout << "Number of graduates under this specialty in the system is less than the number required!" << endl;
+	}
+}
+void printGradComp(string compName, string spName){			//Prints all the speciialists of a specialty under
+	companies *search = searchComp(compName, root);			//specified specialty
+	if(!found){
+		cout << "This company doesn't exist in the system!" << endl;
+		return;
+	}
+	specialties *searchSpy = searchSp(spName, search->spNext);
+	if(searchSpy == NULL){
+		cout << "This specialty doesn't exist under this company!" << endl;
+		return;
+	}
+	cout << "Under company \"" << compName << "\" :" << endl;
+	printGrad(spName, search->spNext);
+}
+void printCompInOrder(companies *root){					//Prints all the companies in the tree in order
+	if(compIsEmpty()){
+		cout << "There are no companies in the system at the moment!" << endl;
+		return;
+	}
+	if(root == NULL){
+		return;
+	}
+	printCompInOrder(root->pLeft);
+	cout << "Company: " << root->name << endl;
+	cout << "Vacant Positions: " << root->qty << endl;
+	cout << endl;
+	printCompInOrder(root->pRight); 
+}
+char welcome(){					//Shows menu and options to select from
+	char ch;
+	cout << endl;
+	cout << "Menu: \nPress A to add new specialty to the system: \nPress B to add new graduate to a specialty:"
+		 << "\nPress C to print the list of specialties in the system:"
+		 << "\nPress D to print the list of graduates of a specialty:"
+		 << "\nPress E to add new company to the system:"
+		 << "\nPress F to add new specialty under a company:"
+		 << "\nPress G to print the list of companies:"
+		 << "\nPress H to print the list of specialties under a company:"
+		 << "\nPress I to add new specialist to a specialty under a company:"
+		 << "\nPress J to print the list of specialists of a specialty under a company:"
+		 << "\nPress Q to quit:"
+		 <<"\nYour choice: ";
+	cin >> ch;
+	cin.ignore();
+	return ch;
+}
+int main(int argc, char** argv) {
+	string gName, spName, compName;
+	int qty, qtyReq;
+	bool done = false;
+	cout << "Welcome! \nPlease Enter your choice: "<< endl;
+	do{										//Loops until the user presses Q as his/her choice
+		char ch = welcome();
+		switch(ch){
+			case 'A':
+			case 'a':
+				cout << endl;
+				cout << "Please enter name of the specialty: ";
+				getline(cin, spName);
+				if(spIsEmpty()){									//Checks if the list is empty if so then lets the 
+					insertSpecialties(spName, spfirst);				//user enter a new specialty
+				}
+				else{
+					if(!searchDupSp(spName, spfirst)){				//Otherwise checks for duplicates, if not found
+						insertSpecialties(spName, spfirst);			//lets the user enter the specialty
+					}
+					else{
+						cout << "This specialty already exists in the system! " << endl;	//If the specialty already 
+					}																		//already exists prints message
+				}
+				break;
+			case 'B':
+			case 'b':
+				if(spIsEmpty()){
+					cout << "The list of specialties is empty!" << endl;
+				}
+				else{
+					cout << endl;
+					cout << "Please enter the specialty of the graduate:";
+					getline(cin, spName);
+					cout << "Please enter the name of the graduate:";
+					getline(cin, gName);
+					if(!searchDupGrad(gName, spName, spfirst)){			//Searches for duplicates under the specialty
+						insertGraduates(gName, spName, spfirst);		//If none found lets the user enter the graduate
+					}
+					else{												//Otherwise prints the message
+						cout << "This graduate already exists under this specialty!" << endl;
+					}
+				}
+				break;
+			case 'C':
+			case 'c':
+				cout << endl;
+				printSp(spfirst);
+				break;
+			case 'D':
+			case 'd':
+				cout << endl;
+				if(spIsEmpty()){
+					cout << "The list of specialties is Empty!" << endl;
+				}
+				else{
+					cout << "List of graduates of which specialty would you like to see?: ";
+					getline(cin, spName);
+					printGrad(spName, spfirst);
+				}
+				break;
+			case 'E':
+			case 'e':
+				cout << endl;
+				cout << "Please enter the name of the company: ";
+				getline(cin, compName);
+				do{															//Loops until the user enters a non-negative value
+					cout << "Please enter the quantity of required specialists: ";
+					cin >> qty;
+					cin.ignore();
+					if(qty < 0){
+						cout << "Please enter a non negative value!" << endl;
+					}
+				}while(qty < 0);
+				root = insertComp(compName, qty, root);
+				break;
+			case 'F':
+			case 'f':
+				cout << endl;
+				if(compIsEmpty()){					//If the tree is empty doesn't let the user enter a specialty
+					cout << "The list of companies is empty!" << endl;
+				}
+				else{
+					cout << endl;
+					cout << "Under which company would you like add the specialty?: ";
+					getline(cin, compName);
+					cout << "Please enter the name of the specialty: ";
+					getline(cin, spName);
+					insertCompSp(spName, compName);
+				}
+				break;
+			case 'G':
+			case 'g':
+				cout << endl;
+				printCompInOrder(root);
+				break;
+			case 'H':
+			case 'h':
+				cout << endl;
+				if(compIsEmpty()){
+					cout << "The list of companies is empty!" << endl;
+				}
+				else{
+					cout << "List of specialties under which company would you like to see?: ";
+					getline(cin, compName);
+					printCompSp(compName);
+				}
+				break;
+			case 'I':
+			case 'i':
+				cout << endl;
+				if(compIsEmpty()){
+					cout << "The list of companies is empty!" << endl;
+				}
+				else{
+					cout << "Under which company would you like to add the specialist?: ";
+					getline(cin, compName);
+					do{											//Loops until user enters a value greater than 0
+						cout << "Please enter the number of specialists you'd like to add: ";
+						cin >> qtyReq;
+						cin.ignore();
+						if(qtyReq <= 0){
+							cout << "Please enter a value greater than 0!" << endl;
+						}
+					}while(qtyReq <= 0);
+					companies *search = searchComp(compName, root);
+					if(!found){
+						cout << "This company doesn't exist in the system!" << endl;
+					}
+					else{
+						if(search->qty > qtyReq){
+							if(qtyReq == 1){
+								cout << "Under which specialty would you like to add the specilist?: ";
+							}
+							else{
+								cout << "Under which specialty would you like to add the specilists?: ";
+							}
+							getline(cin, spName);
+							insertCompGrad(compName, spName, qtyReq);
+						}
+						else{
+							cout << "Not enough vacant postions in the company!" << endl;
+						}
+					}
+				}
+				break;
+			case 'J':
+			case 'j':
+				cout << endl;
+				if(compIsEmpty()){
+					cout << "The list of companies is empty!" << endl;
+				}
+				else{
+					cout << "Specialists under which company would you like to see?: ";
+					getline(cin, compName);
+					cout << "From which specialty would you like to derive the list?: ";
+					getline(cin, spName);
+					printGradComp(compName, spName);
+				}
+				break;
+			case 'Q':
+			case 'q':
+				done = true;
+				break;
+			default :
+				cout << endl;
+				cout << "Please Enter a valid choice!" << endl;
+		}
+	}while(!done);
+	return 0;
+}
